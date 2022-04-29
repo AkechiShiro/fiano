@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/linuxboot/fiano/pkg/guid"
@@ -450,10 +451,12 @@ func NewFile(buf []byte) (*File, error) {
 
 	if ReadOnly {
 		f.buf = buf[:f.Header.ExtendedSize]
+		fmt.Fprintf(os.Stderr, "Readonly, buf size %v for %v\n  ( %v )\n\n", f.Header.ExtendedSize, f.Type, f.Header.GUID)
 	} else {
 		// Copy out the buffer.
 		newBuf := buf[:f.Header.ExtendedSize]
 		f.buf = make([]byte, f.Header.ExtendedSize)
+		fmt.Fprintf(os.Stderr, "Writable, buf size %v for %v\n  ( %v )\n\n", f.Header.ExtendedSize, f.Type, f.Header.GUID)
 		copy(f.buf, newBuf)
 	}
 
@@ -471,6 +474,9 @@ func NewFile(buf []byte) (*File, error) {
 	if _, ok := SupportedFiles[f.Header.Type]; !ok {
 		return &f, nil
 	}
+	// FIXME: To create a section, you need to know the correct buffer size in
+	// advance. However, the f.buf buffer can be too small, and its size is only
+	// checked in `NewSection`, which expects the correct size. That won't work.
 	for i, offset := 0, f.DataOffset; offset < f.Header.ExtendedSize; i++ {
 		s, err := NewSection(f.buf[offset:], i)
 		if err != nil {
